@@ -726,9 +726,13 @@ function placeRobots() {
     target = null;
     selectingTarget = false;
 
+    // 移動履歴を初期化
+    moveHistory = [];
+    movementMessage = null;
+
+    // 最後に画面を更新
     render();
- moveHistory = [];
-movementMessage = null;
+
 }
 
 // 全ロボットを消去
@@ -738,10 +742,10 @@ function clearAll() {
     missingId = null;
     target = null;
     selectingTarget = false;
-
-    render();
  moveHistory = [];
 movementMessage = null;
+    render();
+
 }
 
 
