@@ -9,7 +9,7 @@
 const NS = 'http://www.w3.org/2000/svg';
 const WIDTH = 1000;
 const HEIGHT = 620;
-const RADIUS = 18;
+const RADIUS = 24;
 
 // HTML要素をIDから取得する関数
 const el = id => document.getElementById(id);
@@ -89,6 +89,144 @@ function undoMove() {
     movementMessage = '1手前の状態に戻しました。';
 
     render();
+}
+
+
+// ============================================================
+// 距離円：中心ロボットと半径指定ロボットの組を保存
+// ============================================================
+let distanceCircles = [];
+let nextCircleId = 1;
+const CIRCLE_COLORS = [
+    '#3b82f6', '#10b981', '#f59e0b',
+    '#a855f7', '#ef4444', '#06b6d4'
+];
+
+function paintDistanceCircles() {
+    const layer = el('distanceCircles');
+    layer.replaceChildren();
+
+    for (const circle of distanceCircles) {
+        const center = robots.find(r => r.id === circle.centerId);
+        const radiusRobot = robots.find(r => r.id === circle.radiusId);
+        if (!center || !radiusRobot) continue;
+
+        node('circle', {
+            cx: center.x,
+            cy: center.y,
+            r: distance(center, radiusRobot),
+            fill: circle.color,
+            'fill-opacity': 0.10,
+            stroke: circle.color,
+            'stroke-width': 2.5,
+            'pointer-events': 'none'
+        }, layer);
+    }
+}
+
+function addDistanceCircle() {
+    if (isMoving) return;
+    const centerId = Number(el('circleCenterSelect').value);
+    const radiusId = Number(el('circleRadiusSelect').value);
+    if (!robots.some(r => r.id === centerId) ||
+        !robots.some(r => r.id === radiusId)) return;
+    if (centerId === radiusId) {
+        alert('異なる2台のロボットを選択してください。');
+        return;
+    }
+
+    // 色は登録IDを基準に決定し、削除後も既存円の色を変えない
+    const color = CIRCLE_COLORS[
+        (nextCircleId - 1) % CIRCLE_COLORS.length
+    ];
+    distanceCircles.push({
+        id: nextCircleId++, centerId, radiusId, color
+    });
+    render();
+}
+
+function removeDistanceCircle(circleId) {
+    if (isMoving) return;
+    distanceCircles = distanceCircles.filter(c => c.id !== circleId);
+    render();
+}
+
+function clearDistanceCircles() {
+    if (isMoving) return;
+    distanceCircles = [];
+    nextCircleId = 1;
+    render();
+}
+
+// 選択中のロボット番号を、描画後も維持する
+function updateCircleSelects() {
+    const centerSelect = el('circleCenterSelect');
+    const radiusSelect = el('circleRadiusSelect');
+    const oldCenter = centerSelect.value;
+    const oldRadius = radiusSelect.value;
+    const ids = robots.map(r => String(r.id));
+
+    // 台数が変わらない限り選択肢を作り直さない
+    const optionsMatch = select =>
+        select.options.length === ids.length &&
+        ids.every((id, i) => select.options[i].value === id);
+
+    if (!optionsMatch(centerSelect) || !optionsMatch(radiusSelect)) {
+        for (const select of [centerSelect, radiusSelect]) {
+            select.replaceChildren();
+            for (const r of robots) {
+                const option = document.createElement('option');
+                option.value = String(r.id);
+                option.textContent = `${r.id}番`;
+                select.append(option);
+            }
+        }
+        centerSelect.value = ids.includes(oldCenter) ? oldCenter : (ids[0] ?? '');
+        radiusSelect.value = ids.includes(oldRadius) ? oldRadius : (ids[1] ?? ids[0] ?? '');
+    }
+
+    const disabled = robots.length < 2 || isMoving;
+    centerSelect.disabled = disabled;
+    radiusSelect.disabled = disabled;
+    el('addCircleBtn').disabled = disabled;
+    el('clearCirclesBtn').disabled = isMoving || distanceCircles.length === 0;
+}
+
+function updateCircleList() {
+    const list = el('circleList');
+    list.replaceChildren();
+    if (distanceCircles.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'hint';
+        empty.textContent = '描画中の円はありません。';
+        list.append(empty);
+        return;
+    }
+
+    for (const circle of distanceCircles) {
+        const center = robots.find(r => r.id === circle.centerId);
+        const end = robots.find(r => r.id === circle.radiusId);
+        if (!center || !end) continue;
+
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.style.alignItems = 'center';
+        row.style.marginTop = '5px';
+
+        const label = document.createElement('span');
+        label.textContent = `中心${circle.centerId}番 / 半径${circle.radiusId}番`;
+        label.style.color = circle.color;
+        label.style.fontSize = '11px';
+        label.style.minWidth = '0';
+
+        const remove = document.createElement('button');
+        remove.textContent = '削除';
+        remove.disabled = isMoving;
+        remove.style.flex = '0 0 auto';
+        remove.addEventListener('click', () => removeDistanceCircle(circle.id));
+        row.append(label, remove);
+        list.append(row);
+    }
 }
 
 // SVGキャンバス
@@ -687,11 +825,14 @@ function render() {
 
     const groups = lineGroups();
 
+    paintDistanceCircles();
     paintLines(groups);
     paintTarget();
     paintRobots();
 
     updateControls(candidates, groups);
+    updateCircleSelects();
+    updateCircleList();
 }
 
 // ロボットを初期配置する
@@ -726,13 +867,11 @@ function placeRobots() {
     target = null;
     selectingTarget = false;
 
-    // 移動履歴を初期化
     moveHistory = [];
     movementMessage = null;
-
-    // 最後に画面を更新
+    distanceCircles = [];
+    nextCircleId = 1;
     render();
-
 }
 
 // 全ロボットを消去
@@ -742,10 +881,12 @@ function clearAll() {
     missingId = null;
     target = null;
     selectingTarget = false;
- moveHistory = [];
-movementMessage = null;
-    render();
 
+    moveHistory = [];
+    movementMessage = null;
+    distanceCircles = [];
+    nextCircleId = 1;
+    render();
 }
 
 
@@ -1069,6 +1210,10 @@ function moveObserverTo(destination) {
 el('undoMoveBtn').addEventListener('click', () => {
     undoMove();
 });
+
+// 距離円の追加・全削除
+el('addCircleBtn').addEventListener('click', addDistanceCircle);
+el('clearCirclesBtn').addEventListener('click', clearDistanceCircles);
 // 観測ロボット設定ボタン
 el('setObserverBtn').addEventListener('click', () => {
     const id = Number(el('observerSelect').value);
@@ -1176,6 +1321,8 @@ svg.addEventListener('pointermove', e => {
         return;
     }
 
+    // 手動で配置を動かした場合は、以前の移動履歴を破棄する
+    if (moveHistory.length > 0) moveHistory = [];
     r.x = p.x;
     r.y = p.y;
 
