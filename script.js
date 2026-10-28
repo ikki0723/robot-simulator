@@ -9,7 +9,7 @@
 const NS = 'http://www.w3.org/2000/svg';
 const WIDTH = 1000;
 const HEIGHT = 620;
-const RADIUS = 24;
+const RADIUS = 18;
 
 // HTML要素をIDから取得する関数
 const el = id => document.getElementById(id);
