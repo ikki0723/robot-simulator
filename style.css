@@ -434,3 +434,16 @@ svg .gridline {
   border-top:1px solid #30415b}
 }
 
+
+/* 距離円機能追加：5番目のパネルも画面内で利用できるようにする */
+@media (min-width: 901px) and (min-height: 560px) {
+  .panel {
+    grid-template-rows: repeat(3, minmax(0, auto));
+    align-content: start;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .panel section { min-height: auto; }
+  #circleList { max-height: 150px; overflow-y: auto; }
+}
+#circleList { margin-top: 7px; }
