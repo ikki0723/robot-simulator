@@ -42,6 +42,55 @@ let dragStart = null;
  // 移動ルールの実行結果を表示するメッセージ
  let movementMessage = null;
 
+// ============================================================
+// 移動履歴の管理
+// ============================================================
+
+// 移動前の状態を保存する配列
+let moveHistory = [];
+
+// 現在の状態を履歴に保存
+function saveMoveState() {
+
+    const state = {
+        robots: robots.map(r => ({
+            id: r.id,
+            x: r.x,
+            y: r.y
+        })),
+
+        observerId: observerId,
+        missingId: missingId
+    };
+
+    moveHistory.push(state);
+}
+
+// 直前の移動前の状態に戻す
+function undoMove() {
+
+    if (isMoving || moveHistory.length === 0) {
+        return;
+    }
+
+    const previousState = moveHistory.pop();
+
+    // ロボットの座標を復元
+    robots = previousState.robots.map(r => ({ ...r }));
+
+    // 観測状態を復元
+    observerId = previousState.observerId;
+    missingId = previousState.missingId;
+
+    // 移動先をリセット
+    target = null;
+    selectingTarget = false;
+
+    movementMessage = '1手前の状態に戻しました。';
+
+    render();
+}
+
 // SVGキャンバス
 const svg = el('canvas');
 
@@ -550,6 +599,11 @@ function updateControls(candidates, groups) {
 
 // 自律移動ボタン
 el('autoMoveBtn').disabled = !o || isMoving;
+ 
+// 1手戻すボタンの有効・無効を設定
+el('undoMoveBtn').disabled =
+    isMoving || moveHistory.length === 0;
+
 
 // 手動移動ボタン
 el('chooseTargetBtn').disabled = !o || isMoving;
@@ -673,6 +727,8 @@ function placeRobots() {
     selectingTarget = false;
 
     render();
+ moveHistory = [];
+movementMessage = null;
 }
 
 // 全ロボットを消去
@@ -684,6 +740,8 @@ function clearAll() {
     selectingTarget = false;
 
     render();
+ moveHistory = [];
+movementMessage = null;
 }
 
 
@@ -887,12 +945,15 @@ function animateObserverTo(destination) {
     const observer = getObserver();
 
     // 移動できない場合
-    if (!observer || !destination || isMoving) {
-        return;
-    }
+if (!observer || !destination || isMoving) {
+    return;
+}
 
-    // 移動開始
-    isMoving = true;
+// 移動前の状態を履歴に保存
+saveMoveState();
+
+// 移動開始
+isMoving = true;
 
     // Look時点の欠損候補を保存
     frozenCandidates = farthestIds();
@@ -956,14 +1017,23 @@ function animateObserverTo(destination) {
 }
 
 
-// 観測ロボットを指定した位置に移動させる
+
+// ============================================================
+// 手動移動処理
+// ============================================================
+
 function moveObserverTo(destination) {
+
     const obs = getObserver();
 
-    if (!obs || !destination) {
+    if (!obs || !destination || isMoving) {
         return;
     }
 
+    // 移動前の状態を保存
+    saveMoveState();
+
+    // 移動
     obs.x = clamp(
         destination.x,
         RADIUS,
@@ -979,8 +1049,11 @@ function moveObserverTo(destination) {
     target = null;
     selectingTarget = false;
 
+    movementMessage = '手動移動が完了しました。';
+
     render();
 }
+
 
 
 // ============================================================
@@ -989,6 +1062,9 @@ function moveObserverTo(destination) {
  el('autoMoveBtn').addEventListener('click', () => {
      executeAutonomousMove();
  });
+el('undoMoveBtn').addEventListener('click', () => {
+    undoMove();
+});
 // 観測ロボット設定ボタン
 el('setObserverBtn').addEventListener('click', () => {
     const id = Number(el('observerSelect').value);
