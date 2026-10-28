@@ -1,214 +1,339 @@
+
 <!DOCTYPE html>
 <html lang="ja">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width,initial-scale=1" name="viewport"/>
-  <title>
-   距離的(N,N-2)視野欠損モデルにおける直線形成問題
-  </title>
-  <link href="style.css" rel="stylesheet"/>
- </head>
- <body>
-  <main class="app">
-   <header class="top">
-    <h1>
-     距離的(N,N-2)視野欠損モデルにおける直線形成問題
-    </h1>
-    <p>
-     最遠方の1台を観測できないモデル ｜ 配置・観測・共線状態をインタラクティブに検証
-    </p>
-   </header>
-   <div class="layout">
-    <aside class="panel">
-     <section>
-      <h2>
-       01 / ロボット配置
-      </h2>
-      <label class="field">
-       ロボット台数
-       <input id="robotCount" max="60" min="1" type="number" value="4"/>
-      </label>
-      <div class="row">
-       <button class="primary" id="placeBtn">
-        ロボットを配置
-       </button>
-       <button class="danger" id="clearBtn">
-        全消去
-       </button>
-      </div>
-      <p class="hint">
-       配置後はロボットをドラッグして自由に移動できます。番号は1から振られます。
-      </p>
-     </section>
-     <section>
-      <h2>
-       02 / 観測と視野欠損
-      </h2>
-      <label class="field">
-       観測ロボット番号
-       <select aria-label="観測ロボット番号" id="observerSelect">
-       </select>
-      </label>
-      <button class="primary" id="setObserverBtn" style="width:100%;margin-bottom:12px">
-       観測ロボットに設定
-      </button>
-      <div class="msg" id="observeMessage">
-       番号を選んで「観測ロボットに設定」を押すか、キャンバスのロボットを1回クリックしてください。
-      </div>
-      <label class="field" style="margin-top:12px">
-       欠損対象の切り替え
-       <select disabled="" id="tieSelect">
-        <option>
-         対象なし
-        </option>
-       </select>
-      </label>
-      <button id="cancelObserver" style="width:100%">
-       観測指定を解除
-      </button>
-      <p class="hint">
-       最遠距離が同じロボットが複数ある場合、候補の中から半透明にする1台を選べます。
-      </p>
-     </section>
-     <section>
-      <h2>
-       03 / 観測ロボットの移動
 
-<!-- ================================================== -->
-<!-- 03 / 観測ロボットの移動 -->
-<!-- ================================================== -->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<section>
+    <title>
+        距離的(N,N-2)視野欠損モデルにおける直線形成問題
+    </title>
 
-    <h2>03 / 観測ロボットの移動</h2>
+    <link rel="stylesheet" href="style.css">
+</head>
 
-    <!-- 自律移動機能 -->
-    <div class="stack">
+<body>
+    <main class="app">
 
-        <button
-            class="primary"
-            id="autoMoveBtn"
-            disabled
-        >
-            観測・自律移動を実行
-        </button>
+        <!-- ============================================ -->
+        <!-- ヘッダー -->
+        <!-- ============================================ -->
 
-    </div>
+        <header class="top">
+            <h1>
+                距離的(N,N-2)視野欠損モデルにおける直線形成問題
+            </h1>
 
-    <p class="hint">
-        観測ロボットが周囲を観測し、
-        観測結果に応じた移動ルールを自動的に適用します。
-    </p>
+            <p>
+                最遠方の1台を観測できないモデル ｜
+                配置・観測・共線状態をインタラクティブに検証
+            </p>
+        </header>
 
-    <!-- 手動移動機能 -->
-    <div class="stack">
+        <div class="layout">
 
-        <button id="chooseTargetBtn" disabled>
-            移動先をキャンバス上で指定
-        </button>
+            <!-- ======================================== -->
+            <!-- 左側：操作パネル -->
+            <!-- ======================================== -->
 
-        <button
-            class="primary"
-            id="moveBtn"
-            disabled
-        >
-            指定先へ移動
-        </button>
+            <aside class="panel">
 
-        <button id="cancelTargetBtn" disabled>
-            移動先指定を解除
-        </button>
+                <!-- ==================================== -->
+                <!-- 01 / ロボット配置 -->
+                <!-- ==================================== -->
 
-    </div>
+                <section>
+                    <h2>01 / ロボット配置</h2>
 
-    <!-- 移動結果の表示 -->
-    <p class="hint" id="targetText">
-        観測ロボットを選択してください。
-    </p>
+                    <label class="field">
+                        ロボット台数
 
-    <!-- 現在実装されている移動ルール -->
-    <p class="mini">
-        ルール1：
-        自身が3台以上の直線を構成していない場合、
-        観測可能なロボットの最短辺の中点へ移動します。
-    </p>
+                        <input
+                            id="robotCount"
+                            type="number"
+                            min="1"
+                            max="60"
+                            value="4"
+                        >
+                    </label>
 
-</section>
+                    <div class="row">
 
-       04 / 直線判定
-      </h2>
-      <label class="field">
-       座標誤差の許容値 (px)
-       <input id="lineTol" max="10" min="0" step="0.1" type="number" value="1"/>
-      </label>
-      <p class="hint">
-       3台以上が同一直線上にある場合、両端を線で結びます。判定は座標上の距離を使います。
-      </p>
-      <div class="msg" id="lineMessage" style="margin-top:12px">
-       ロボットを配置してください。
-      </div>
-     </section>
-    </aside>
-    <section class="stagePanel">
-     <div class="stageTop">
-      <b>
-       配置キャンバス
-      </b>
-      <span>
-       ドラッグ：位置変更 / クリック：観測者に指定
-      </span>
-     </div>
-     <div class="canvasWrap">
-      <svg aria-label="ロボットの位置と視野欠損を示す編集可能なキャンバス" id="canvas" viewbox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg">
-       <g id="grid">
-       </g>
-       <g id="lines">
-       </g>
-       <g id="targetLayer">
-       </g>
-       <g id="robots">
-       </g>
-      </svg>
-     </div>
-     <div class="legend">
-      <span>
-       <i class="dot">
-       </i>
-       通常ロボット
-      </span>
-      <span>
-       <i class="dot red">
-       </i>
-       観測ロボット
-      </span>
-      <span>
-       <i class="dot fade">
-       </i>
-       観測不可（1台）
-      </span>
-      <span>
-       — 青線：3台以上が共線
-      </span>
-     </div>
-     <div class="status">
-      <span class="tag" id="robotStatus">
-       ロボット: 0台
-      </span>
-      <span class="tag" id="observerStatus">
-       観測者: 未指定
-      </span>
-      <span class="tag" id="missingStatus">
-       欠損: なし
-      </span>
-      <span class="tag" id="positionStatus">
-       選択座標: ―
-      </span>
-     </div>
-    </section>
-   </div>
-  </main>
-  <script src="script.js">
-  </script>
- </body>
+                        <button
+                            class="primary"
+                            id="placeBtn"
+                        >
+                            ロボットを配置
+                        </button>
+
+                        <button
+                            class="danger"
+                            id="clearBtn"
+                        >
+                            全消去
+                        </button>
+
+                    </div>
+
+                    <p class="hint">
+                        配置後はロボットをドラッグして
+                        自由に移動できます。
+                    </p>
+                </section>
+
+
+                <!-- ==================================== -->
+                <!-- 02 / 観測と視野欠損 -->
+                <!-- ==================================== -->
+
+                <section>
+                    <h2>02 / 観測と視野欠損</h2>
+
+                    <label class="field">
+                        観測ロボット番号
+
+                        <select
+                            id="observerSelect"
+                            aria-label="観測ロボット番号"
+                        ></select>
+                    </label>
+
+                    <button
+                        class="primary"
+                        id="setObserverBtn"
+                        style="width:100%; margin-bottom:12px"
+                    >
+                        観測ロボットに設定
+                    </button>
+
+                    <div class="msg" id="observeMessage">
+                        ロボットを選択してください。
+                    </div>
+
+                    <label
+                        class="field"
+                        style="margin-top:12px"
+                    >
+                        欠損対象の切り替え
+
+                        <select id="tieSelect" disabled>
+                            <option>対象なし</option>
+                        </select>
+                    </label>
+
+                    <button
+                        id="cancelObserver"
+                        style="width:100%"
+                    >
+                        観測指定を解除
+                    </button>
+
+                    <p class="hint">
+                        最遠距離が同じロボットが複数ある場合、
+                        欠損対象を切り替えられます。
+                    </p>
+                </section>
+
+
+                <!-- ==================================== -->
+                <!-- 03 / 観測ロボットの移動 -->
+                <!-- ==================================== -->
+
+                <section>
+                    <h2>03 / 観測ロボットの移動</h2>
+
+                    <!-- 自律移動 -->
+                    <div class="stack">
+
+                        <button
+                            class="primary"
+                            id="autoMoveBtn"
+                            disabled
+                        >
+                            観測・自律移動を実行
+                        </button>
+
+                        <!-- 今回追加する履歴機能 -->
+                        <button
+                            id="undoMoveBtn"
+                            disabled
+                        >
+                            ↶ 1手戻す
+                        </button>
+
+                    </div>
+
+                    <p class="hint">
+                        観測結果に応じて移動ルールを
+                        自動的に適用します。
+                    </p>
+
+                    <!-- 手動移動 -->
+                    <div class="stack">
+
+                        <button
+                            id="chooseTargetBtn"
+                            disabled
+                        >
+                            移動先をキャンバス上で指定
+                        </button>
+
+                        <button
+                            class="primary"
+                            id="moveBtn"
+                            disabled
+                        >
+                            指定先へ移動
+                        </button>
+
+                        <button
+                            id="cancelTargetBtn"
+                            disabled
+                        >
+                            移動先指定を解除
+                        </button>
+
+                    </div>
+
+                    <!-- 移動結果の表示 -->
+                    <p class="hint" id="targetText">
+                        観測ロボットを選択してください。
+                    </p>
+
+                    <p class="mini">
+                        ルール1：
+                        自身が3台以上の直線を構成していない場合、
+                        観測範囲内の最短辺の中点へ移動します。
+                    </p>
+
+                </section>
+
+
+                <!-- ==================================== -->
+                <!-- 04 / 直線判定 -->
+                <!-- ==================================== -->
+
+                <section>
+                    <h2>04 / 直線判定</h2>
+
+                    <label class="field">
+                        座標誤差の許容値 (px)
+
+                        <input
+                            id="lineTol"
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value="1"
+                        >
+                    </label>
+
+                    <p class="hint">
+                        3台以上が同一直線上にある場合、
+                        両端を線で結びます。
+                    </p>
+
+                    <div
+                        class="msg"
+                        id="lineMessage"
+                        style="margin-top:12px"
+                    >
+                        ロボットを配置してください。
+                    </div>
+
+                </section>
+
+            </aside>
+
+
+            <!-- ======================================== -->
+            <!-- 右側：シミュレーション画面 -->
+            <!-- ======================================== -->
+
+            <section class="stagePanel">
+
+                <div class="stageTop">
+                    <b>配置キャンバス</b>
+
+                    <span>
+                        ドラッグ：位置変更 /
+                        クリック：観測者に指定
+                    </span>
+                </div>
+
+                <!-- ロボット描画領域 -->
+                <div class="canvasWrap">
+
+                    <svg
+                        id="canvas"
+                        viewBox="0 0 1000 620"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-label="ロボット配置キャンバス"
+                    >
+                        <g id="grid"></g>
+                        <g id="lines"></g>
+                        <g id="targetLayer"></g>
+                        <g id="robots"></g>
+                    </svg>
+
+                </div>
+
+
+                <!-- 凡例 -->
+                <div class="legend">
+
+                    <span>
+                        <i class="dot"></i>
+                        通常ロボット
+                    </span>
+
+                    <span>
+                        <i class="dot red"></i>
+                        観測ロボット
+                    </span>
+
+                    <span>
+                        <i class="dot fade"></i>
+                        観測不可（1台）
+                    </span>
+
+                    <span>
+                        — 青線：3台以上が共線
+                    </span>
+
+                </div>
+
+
+                <!-- ステータス -->
+                <div class="status">
+
+                    <span class="tag" id="robotStatus">
+                        ロボット: 0台
+                    </span>
+
+                    <span class="tag" id="observerStatus">
+                        観測者: 未指定
+                    </span>
+
+                    <span class="tag" id="missingStatus">
+                        欠損: なし
+                    </span>
+
+                    <span class="tag" id="positionStatus">
+                        選択座標: ―
+                    </span>
+
+                </div>
+
+            </section>
+
+        </div>
+    </main>
+
+    <!-- JavaScriptの読み込み -->
+    <script src="script.js"></script>
+
+</body>
 </html>
-
