@@ -447,3 +447,39 @@ svg .gridline {
   #circleList { max-height: 150px; overflow-y: auto; }
 }
 #circleList { margin-top: 7px; }
+
+/* ==========================================================
+   修正：5つの操作セクションを重ねずに配置する
+   デスクトップでは左パネルのみスクロールできるようにする
+   ========================================================== */
+@media (min-width: 901px) and (min-height: 560px) {
+  .panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;       /* 旧 1fr 1fr を解除 */
+    grid-auto-rows: max-content;    /* 中身に応じた高さを割り当てる */
+    align-content: start;
+    align-items: start;
+    overflow-x: hidden;
+    overflow-y: auto;              /* 左パネルだけ縦スクロール */
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .panel > section,
+  .panel > section + section {
+    height: auto;
+    min-height: max-content;
+    min-width: 0;
+    margin: 0;
+    padding: 10px;
+    flex: none;
+  }
+  .panel .field { flex-shrink: 0; }
+  .panel .msg { overflow-wrap: anywhere; }
+  #circleList .row { min-width: 0; }
+}
+
+/* 狭い画面では通常の縦長レイアウトに戻す */
+@media (max-width: 900px), (max-height: 559px) {
+  .panel { overflow: visible; grid-template-rows: none; }
+}
