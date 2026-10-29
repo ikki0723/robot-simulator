@@ -968,13 +968,101 @@ function computeRule1(observer, visibleRobots) {
     };
 }
 
+
+// ============================================================
+// ルール2：
+// 自身が直線を形成していても、
+// 他所に同じ長さ以下の最短辺があれば移動
+// ============================================================
+
+function computeRule2(observer, visibleRobots) {
+
+    const tol = Number(el('lineTol').value) || 0;
+    const EPS = 1e-7;
+
+    // 自身が3台以上の直線を形成している場合のみ適用
+    if (!isOnLineOfThree(observer, visibleRobots)) {
+        return null;
+    }
+
+    let shortestOnLine = Infinity;
+    let shortestOther = Infinity;
+    let otherPair = null;
+
+    const sorted = [...visibleRobots].sort(
+        (a, b) => a.id - b.id
+    );
+
+    // 観測可能な他ロボットの全ペアを調べる
+    for (let i = 0; i < sorted.length; i++) {
+        for (let j = i + 1; j < sorted.length; j++) {
+
+            const a = sorted[i];
+            const b = sorted[j];
+            const d = distance(a, b);
+
+            // 観測ロボットと同一直線上にある辺か
+            const onOwnLine =
+                d > EPS &&
+                collinear(observer, a, b, tol);
+
+            if (onOwnLine) {
+
+                // 自身の直線上の最短辺
+                shortestOnLine = Math.min(
+                    shortestOnLine,
+                    d
+                );
+
+            } else {
+
+                // 他所にある最短辺
+                if (d < shortestOther - EPS) {
+                    shortestOther = d;
+                    otherPair = [a, b];
+                }
+            }
+        }
+    }
+
+    // 他所に辺が存在しない場合
+    if (!otherPair) {
+        return null;
+    }
+
+    // 他所の最短辺が、自身の直線上の
+    // 最短辺より長い場合は移動しない
+    if (shortestOther > shortestOnLine + EPS) {
+        return null;
+    }
+
+    // 他所の最短辺の中点へ移動
+    const [a, b] = otherPair;
+
+    return {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+        pair: [a.id, b.id]
+    };
+}
+
+
+// ============================================================
+// 自律移動アルゴリズム（Compute）
+// ============================================================
+
+
 // ============================================================
 // 自律移動アルゴリズム（Compute）
 // ============================================================
 
 function computeAutonomousDestination(observer, visibleRobots) {
 
-    // ルール1を判定
+    // ----------------------------------------
+    // ルール1
+    // 直線を形成していない場合
+    // ----------------------------------------
+
     const rule1 = computeRule1(observer, visibleRobots);
 
     if (rule1 !== null) {
@@ -984,17 +1072,30 @@ function computeAutonomousDestination(observer, visibleRobots) {
         };
     }
 
-    // ========================================================
-    // TODO：ここにルール2を追加
-    // ========================================================
+    // ----------------------------------------
+    // ルール2
+    // 直線上にいても、別の短い辺がある場合
+    // ----------------------------------------
 
-    // ========================================================
-    // TODO：ここにルール3を追加
-    // ========================================================
+    const rule2 = computeRule2(observer, visibleRobots);
 
-    // どの移動ルールにも該当しない場合
+    if (rule2 !== null) {
+        return {
+            ...rule2,
+            rule: 2
+        };
+    }
+
+    // ----------------------------------------
+    // 今後追加するルール
+    // ----------------------------------------
+
+    // TODO：ルール3
+
+    // どのルールにも該当しない場合
     return null;
 }
+
 
 // ============================================================
 // 自律移動を実行：Look → Compute → Move
