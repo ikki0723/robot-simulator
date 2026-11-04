@@ -365,6 +365,22 @@ function collinear(a, b, c, tol) {
     return Math.abs(cross(a, b, c)) / len <= tol;
 }
 
+/**
+ * 3台のロボットが共線か判定する。
+ *
+ * 3台のうち、いずれか2台を通る直線から
+ * 残る1台までの距離が許容誤差以内なら
+ * 共線と判定する。
+ */
+function sameLineTriple(a, b, c, tol) {
+
+    return (
+        collinear(a, b, c, tol) ||
+        collinear(a, c, b, tol) ||
+        collinear(b, c, a, tol)
+    );
+}
+
 // 3台以上のロボットが並ぶ直線群を取得
 function lineGroups() {
     const tol = Number(el('lineTol').value) || 0;
@@ -438,25 +454,34 @@ function lineGroups() {
         .sort((a, b) => b.ids.length - a.ids.length);
 }
 
+
+// ============================================================
+// 観測ロボットが3台以上の直線を構成しているか判定
+// ============================================================
+
 function isOnLineOfThree(observer, visibleRobots) {
 
     const tol = Number(el('lineTol').value) || 0;
 
-    // 観測可能な他のロボットから2台を選ぶ
+    // 観測可能な他ロボットから2台を選択
     for (let i = 0; i < visibleRobots.length; i++) {
 
         for (let j = i + 1; j < visibleRobots.length; j++) {
 
-            const robotA = visibleRobots[i];
-            const robotB = visibleRobots[j];
+            const a = visibleRobots[i];
+            const b = visibleRobots[j];
 
-            // 観測ロボット自身を含めた3台が共線か判定
+            // 同じ位置にあるロボットは除外
             if (
-                distance(observer, robotA) > 1e-9 &&
-                distance(observer, robotB) > 1e-9 &&
-                distance(robotA, robotB) > 1e-9 &&
-                collinear(observer, robotA, robotB, tol)
+                distance(observer, a) < 1e-9 ||
+                distance(observer, b) < 1e-9 ||
+                distance(a, b) < 1e-9
             ) {
+                continue;
+            }
+
+            // 新しい共線判定を使用
+            if (sameLineTriple(observer, a, b, tol)) {
                 return true;
             }
         }
@@ -464,6 +489,7 @@ function isOnLineOfThree(observer, visibleRobots) {
 
     return false;
 }
+
 
 
 // ============================================================
@@ -1008,13 +1034,15 @@ function computeRule2(observer, visibleRobots) {
 
         // observerとaが、他の1台と共線なら
         // 自身の属する直線上の辺として扱う
-        const onOwnLine = sorted.some((b, j) =>
-            i !== j &&
-            distance(observer, a) > EPS &&
-            distance(observer, b) > EPS &&
-            distance(a, b) > EPS &&
-            collinear(observer, a, b, tol)
-        );
+
+const onOwnLine = sorted.some((b, j) =>
+    i !== j &&
+    distance(observer, a) > EPS &&
+    distance(observer, b) > EPS &&
+    distance(a, b) > EPS &&
+    sameLineTriple(observer, a, b, tol)
+);
+
 
         if (onOwnLine) {
             shortestOnLine = Math.min(
@@ -1037,9 +1065,11 @@ function computeRule2(observer, visibleRobots) {
             const d = distance(a, b);
 
             // 自身の属する直線上の辺か判定
-            const onOwnLine =
-                d > EPS &&
-                collinear(observer, a, b, tol);
+
+const onOwnLine =
+    d > EPS &&
+    sameLineTriple(observer, a, b, tol);
+
 
             if (onOwnLine) {
 
