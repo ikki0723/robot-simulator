@@ -975,12 +975,17 @@ function computeRule1(observer, visibleRobots) {
 // 他所に同じ長さ以下の最短辺があれば移動
 // ============================================================
 
+
+// ============================================================
+// ルール2：自身を含む辺も長さ比較の対象とする
+// ============================================================
+
 function computeRule2(observer, visibleRobots) {
 
     const tol = Number(el('lineTol').value) || 0;
     const EPS = 1e-7;
 
-    // 自身が3台以上の直線を形成している場合のみ適用
+    // 自身が3台以上の直線を構成していなければ適用しない
     if (!isOnLineOfThree(observer, visibleRobots)) {
         return null;
     }
@@ -993,22 +998,51 @@ function computeRule2(observer, visibleRobots) {
         (a, b) => a.id - b.id
     );
 
-    // 観測可能な他ロボットの全ペアを調べる
+    // --------------------------------------------------------
+    // ① 自身を端点とする辺の長さを比較
+    // --------------------------------------------------------
+
     for (let i = 0; i < sorted.length; i++) {
+
+        const a = sorted[i];
+
+        // observerとaが、他の1台と共線なら
+        // 自身の属する直線上の辺として扱う
+        const onOwnLine = sorted.some((b, j) =>
+            i !== j &&
+            distance(observer, a) > EPS &&
+            distance(observer, b) > EPS &&
+            distance(a, b) > EPS &&
+            collinear(observer, a, b, tol)
+        );
+
+        if (onOwnLine) {
+            shortestOnLine = Math.min(
+                shortestOnLine,
+                distance(observer, a)
+            );
+        }
+    }
+
+    // --------------------------------------------------------
+    // ② 観測可能な他ロボット同士の辺を比較
+    // --------------------------------------------------------
+
+    for (let i = 0; i < sorted.length; i++) {
+
         for (let j = i + 1; j < sorted.length; j++) {
 
             const a = sorted[i];
             const b = sorted[j];
             const d = distance(a, b);
 
-            // 観測ロボットと同一直線上にある辺か
+            // 自身の属する直線上の辺か判定
             const onOwnLine =
                 d > EPS &&
                 collinear(observer, a, b, tol);
 
             if (onOwnLine) {
 
-                // 自身の直線上の最短辺
                 shortestOnLine = Math.min(
                     shortestOnLine,
                     d
@@ -1016,7 +1050,6 @@ function computeRule2(observer, visibleRobots) {
 
             } else {
 
-                // 他所にある最短辺
                 if (d < shortestOther - EPS) {
                     shortestOther = d;
                     otherPair = [a, b];
@@ -1025,18 +1058,17 @@ function computeRule2(observer, visibleRobots) {
         }
     }
 
-    // 他所に辺が存在しない場合
+    // 他所に辺が存在しない場合は停止
     if (!otherPair) {
         return null;
     }
 
-    // 他所の最短辺が、自身の直線上の
-    // 最短辺より長い場合は移動しない
+    // 他所の最短辺の方が長い場合は停止
     if (shortestOther > shortestOnLine + EPS) {
         return null;
     }
 
-    // 他所の最短辺の中点へ移動
+    // 他所の最短辺が短い、または同じ長さなら移動
     const [a, b] = otherPair;
 
     return {
@@ -1045,6 +1077,7 @@ function computeRule2(observer, visibleRobots) {
         pair: [a.id, b.id]
     };
 }
+
 
 
 // ============================================================
